@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-marketing-squad"
+version = "1.0.0"
+description = "A role-based multi-agent workflow for research-backed marketing content creation."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "agno>=3.0.0",
+  "openai>=1.30.0",
+  "tavily-python>=0.5.0",
+  "python-dotenv>=1.0.0",
+  "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.5.0"]
+
+[project.scripts]
+marketing-squad = "marketing_squad.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
