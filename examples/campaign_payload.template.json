@@ -1,0 +1,19 @@
+{
+  "topic": "Example topic",
+  "slides": [
+    {
+      "slide_number": 1,
+      "title": "",
+      "visual_idea": "",
+      "script": ""
+    }
+  ],
+  "caption": "",
+  "hashtags": [],
+  "sources": [
+    {
+      "url": "https://example.com/source",
+      "title": "Replace with a source you reviewed"
+    }
+  ]
+}
