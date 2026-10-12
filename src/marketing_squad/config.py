@@ -24,7 +24,7 @@ class Settings:
     max_carousel_slides: int = 10
 
     @classmethod
-    def from_env(cls, *, load_dotenv_file: bool = True) -> "Settings":
+    def from_env(cls, *, load_dotenv_file: bool = True) -> Settings:
         """Load settings without exposing secret values."""
         if load_dotenv_file:
             load_dotenv()

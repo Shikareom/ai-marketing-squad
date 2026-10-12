@@ -2,63 +2,54 @@
 
 ## Overview
 
-AI Marketing Squad turns a topic, target audience, and platform list into a research-informed social carousel draft. The Agno team coordinates three agents; custom Python validation keeps the slide-count check deterministic.
+The application enforces the three stages in Python. Each step receives a typed Pydantic model rather than relying on a team leader to follow ordering instructions.
 
-```mermaid
+\`\`\`mermaid
 flowchart TD
-    A[Topic, audience, platforms] --> B[Team coordinator]
-    B --> C[Trend Scout]
+    A[Topic, audience, platforms] --> B[Trend Scout]
+    B --> C[ResearchBrief schema validation]
     C --> D[Creative Director]
-    D --> E[Carousel structure validator]
-    E --> D
-    D --> F[Content Copywriter]
-    F --> G[Slides, caption, hashtags, source links]
-    G --> H[Human review]
-```
+    D --> E[CreativeBrief schema and slide-count validation]
+    E -->|Invalid: one correction attempt| D
+    E -->|Valid| F[Content Copywriter]
+    F --> G[CampaignDraft schema validation]
+    G --> H[Objective structural evaluation]
+    H -->|Failed: one correction attempt| F
+    H -->|Passed| I[Markdown and JSON artifacts]
+    I --> J[Human review]
+\`\`\`
 
-## Components
+## Stage contracts
 
-### Trend Scout — `agents/trend_scout.py`
+### 1. Trend Scout — \`agents/trend_scout.py\`
 
-Searches for three timely, audience-relevant hooks and asks for source titles, URLs, and publication dates when available. It should separate source facts from recommendations and state when evidence is weak.
+Receives topic, audience, and platform context. It uses Tavily search and returns a typed \`ResearchBrief\` with exactly three \`ResearchFinding\` objects. Each finding has audience relevance, an evidence summary, and at least one \`SourceReference\`. Source URLs and publication dates still require human verification.
 
-### Creative Director — `agents/creative_director.py`
+### 2. Creative Director — \`agents/creative_director.py\`
 
-Turns research into a slide-by-slide visual blueprint. It uses the deterministic carousel validator and revises plans that fall outside the configured minimum and maximum. The default range of 7–10 is a project design choice, not a performance guarantee.
+Receives the serialized research artifact and returns a \`CreativeBrief\`. Each planned slide includes a sequential number, title, visual idea, and purpose. The agent has a deterministic count validator; the workflow independently checks returned count and numbering, then requests one correction attempt if needed.
 
-### Content Copywriter — `agents/content_copywriter.py`
+### 3. Content Copywriter — \`agents/content_copywriter.py\`
 
-Writes clear, natural, audience-aware slide scripts, one caption, and ten relevant hashtags. It is instructed not to invent statistics, quotes, sources, or outcomes.
+Receives both the research artifact and the accepted creative blueprint. It returns a typed \`CampaignDraft\` with final slide scripts, a caption, hashtags, and source references. The workflow evaluates the artifact, issues one correction request when objective checks fail, then raises a validation error rather than returning a structurally invalid campaign.
 
-### Team coordination — `team.py`
+## Core modules
 
-Creates the Agno team and defines the research → blueprint → copy workflow. Provider imports are deferred so structural validation and tests can run without invoking live services.
+- \`models.py\`: Pydantic contracts shared by agents and tests.
+- \`workflow.py\`: sequential orchestration, bounded correction loops, rendering, and evaluation integration.
+- \`squad.py\`: public library functions; Markdown output or a structured result with intermediate artifacts.
+- \`validation.py\`: deterministic slide-count and payload checks.
+- \`config.py\`: model selection, slide limits, and secret configuration.
+- \`cli.py\`: command-line usage and optional JSON artifact output.
 
-### Configuration — `config.py`
+## Trust boundaries and failure behavior
 
-Reads keys and configurable values from environment variables, optionally loading a local `.env`. Key values are never printed by this module.
+- Structured schemas constrain shape, not truth. A schema-valid URL may still be irrelevant or misleading.
+- Agent/provider exceptions surface to the CLI, which returns a non-zero exit code and can print a traceback with \`--verbose\`.
+- Creative and final-copy correction attempts are bounded to one by default; the workflow fails explicitly if the result remains invalid.
+- The system does not auto-publish, keep a database of campaigns, or collect live performance analytics.
+- API keys should be supplied through environment variables or a local ignored \`.env\` file.
 
-### Validation and evaluation — `validation.py`
+## Test strategy
 
-Implements deterministic slide-count validation and checks the completeness of normalized campaign payloads. These are structural checks only; they cannot verify factuality, source relevance, or marketing outcomes.
-
-## Data flow
-
-1. The CLI accepts a topic, audience, and platforms.
-2. `generate_campaign` validates user inputs and constructs the task prompt.
-3. The Agno coordinator delegates work across the specialized agents.
-4. The Creative Director calls the slide-count tool.
-5. The team returns a text draft for human review.
-6. The separate evaluator can assess a normalized JSON campaign representation.
-
-## Trust boundaries and failure cases
-
-- Search snippets may be incomplete or misleading; open and verify source pages.
-- Model output may contain unsupported claims despite instructions.
-- Provider keys and API availability are external dependencies.
-- The current CLI returns a text draft. It does not automatically persist campaign history or publish to social platforms.
-- Errors during live runs depend on provider/network behavior and should be reviewed rather than silently treated as successful generations.
-
-## Extending the system
-
-Potential future improvements include structured model output, retries with bounded backoff, structured logging with secret redaction, campaign-specific quality rubrics, and capture of latency/token/cost data when the provider exposes it.
+Unit tests exercise validators and the campaign input contract. Workflow tests inject fake agents to verify stage ordering, artifact hand-off, correction paths, and structural evaluation. An agent-construction smoke test creates real Agno objects with test-only credentials without calling model or search APIs. GitHub Actions runs tests and Ruff on supported Python versions.

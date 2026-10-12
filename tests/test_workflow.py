@@ -1,54 +1,111 @@
-"""Tests for the public workflow API without making provider calls."""
+"""Contract tests for the public workflow API without live provider calls."""
 
 import pytest
 
+from marketing_squad.config import Settings
+from marketing_squad.models import (
+    CampaignDraft,
+    CampaignSlide,
+    CreativeBrief,
+    PlannedSlide,
+    ResearchBrief,
+    ResearchFinding,
+    SourceReference,
+)
 from marketing_squad.squad import generate_campaign
+from marketing_squad.workflow import AgentPipeline
 
 
-class FakeResponse:
-    content = "A generated campaign draft."
+SOURCE = SourceReference(title="Example source", url="https://example.com/research")
 
 
-class FakeTeam:
-    def __init__(self):
-        self.prompt = None
+def _research():
+    return ResearchBrief(
+        topic="Build a project portfolio",
+        findings=[
+            ResearchFinding(
+                hook=f"Portfolio hook {number}",
+                audience_relevance="Useful for students",
+                evidence_summary="A source-backed note used only in testing.",
+                sources=[SOURCE],
+            )
+            for number in range(1, 4)
+        ],
+    )
 
-    def run(self, prompt: str):
-        self.prompt = prompt
-        return FakeResponse()
+
+def _blueprint():
+    return CreativeBrief(
+        core_message="A portfolio should prove skills with evidence.",
+        slides=[
+            PlannedSlide(
+                slide_number=number,
+                title=f"Slide {number}",
+                visual_idea="One clear visual idea for this slide.",
+                purpose="Explain one useful takeaway.",
+            )
+            for number in range(1, 8)
+        ],
+    )
 
 
-def test_generate_campaign_uses_injected_team():
-    team = FakeTeam()
+def _campaign():
+    return CampaignDraft(
+        topic="Build a project portfolio",
+        audience="students",
+        platforms=["LinkedIn", "Instagram"],
+        slides=[
+            CampaignSlide(
+                slide_number=number,
+                title=f"Slide {number}",
+                visual_idea="One clear visual idea for this slide.",
+                script="Explain one useful takeaway with a concrete next step.",
+            )
+            for number in range(1, 8)
+        ],
+        caption="A practical portfolio guide for students.",
+        hashtags=[f"#portfolio{number}" for number in range(10)],
+        sources=[SOURCE],
+    )
+
+
+class FakeAgent:
+    def __init__(self, result):
+        self.result = result
+        self.prompts = []
+
+    def run(self, prompt):
+        self.prompts.append(prompt)
+        return type("Response", (), {"content": self.result})()
+
+
+def _pipeline():
+    return AgentPipeline(
+        trend_scout=FakeAgent(_research()),
+        creative_director=FakeAgent(_blueprint()),
+        copywriter=FakeAgent(_campaign()),
+        settings=Settings(None, None),
+    )
+
+
+def test_public_api_returns_review_ready_markdown():
     result = generate_campaign(
-        "  Build a project portfolio  ",
+        "Build a project portfolio",
         audience="students",
         platforms=("LinkedIn", "Instagram"),
-        squad=team,
+        pipeline=_pipeline(),
     )
-    assert result == "A generated campaign draft."
-    assert "Topic: Build a project portfolio" in team.prompt
-    assert "Target audience: students" in team.prompt
-    assert "Platforms: LinkedIn, Instagram" in team.prompt
-    assert "clickable URLs" in team.prompt
+    assert "# Campaign: Build a project portfolio" in result
+    assert "## Structural validation" in result
+    assert "https://example.com/research" in result
+    assert "## Hashtags" in result
 
 
-def test_generate_campaign_falls_back_for_blank_audience():
-    team = FakeTeam()
-    generate_campaign("Portfolio planning", audience="  ", squad=team)
-    assert "Target audience: general professional audience" in team.prompt
-
-
-def test_generate_campaign_rejects_empty_topic():
+def test_public_api_rejects_blank_topic():
     with pytest.raises(ValueError, match="topic must not be empty"):
-        generate_campaign("   ", squad=FakeTeam())
+        generate_campaign("  ", pipeline=_pipeline())
 
 
-def test_generate_campaign_rejects_empty_platforms():
+def test_public_api_rejects_empty_platforms():
     with pytest.raises(ValueError, match="at least one non-empty platform"):
-        generate_campaign("Portfolio planning", platforms=(), squad=FakeTeam())
-
-
-def test_generate_campaign_rejects_blank_platform_name():
-    with pytest.raises(ValueError, match="at least one non-empty platform"):
-        generate_campaign("Portfolio planning", platforms=("LinkedIn", " "), squad=FakeTeam())
+        generate_campaign("Valid topic", platforms=(), pipeline=_pipeline())

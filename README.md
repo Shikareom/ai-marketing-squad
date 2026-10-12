@@ -1,104 +1,123 @@
 # AI Marketing Squad
 
-A modular multi-agent workflow for research-backed social marketing content.
+A modular, research-informed multi-agent workflow that turns a campaign brief into a structured social-content draft with source references and objective quality gates.
 
-## Overview
+## What it does
 
-The project coordinates three specialized agents: **Trend Scout** researches current hooks and source URLs, **Creative Director** plans the carousel structure and visual direction, and **Content Copywriter** drafts slide copy, a caption, and hashtags. Agno coordinates the team, OpenAI provides the chat model, and Tavily provides web search.
+Three focused agents handle distinct stages:
 
-This is a working prototype. Generated content requires human review. No live content-quality or marketing-performance baselines have been measured, and this repository does not claim engagement, conversion, or time-savings results.
+1. **Trend Scout** researches three current hooks, evidence summaries, and source references.
+2. **Creative Director** transforms the research brief into a validated, slide-by-slide blueprint.
+3. **Content Copywriter** writes slide scripts, a caption, hashtags, and source references.
 
-## Workflow
+The application explicitly passes each structured result to the next stage. The workflow validates slide count and sequencing, corrects invalid drafts once, and evaluates the final campaign before returning it.
 
-1. Provide a topic, audience, and target platforms.
-2. Research timely hooks and request source URLs.
-3. Produce a slide-by-slide visual blueprint.
-4. Validate the configured carousel slide-count range (default 7–10).
-5. Generate slide scripts, caption, and hashtags.
-6. Review all sources and content before publishing.
+This is a working prototype. It creates drafts for human review; it does not automatically publish posts or track campaign performance.
+
+## Architecture
+
+\`\`\`text
+src/marketing_squad/
+├── agents/
+│   ├── trend_scout.py
+│   ├── creative_director.py
+│   └── content_copywriter.py
+├── models.py
+├── workflow.py
+├── squad.py
+├── cli.py
+├── config.py
+├── tools.py
+└── validation.py
+\`\`\`
+
+See [the architecture guide](docs/architecture.md) for stage contracts, error behavior, and trust boundaries.
 
 ## Quick start
 
 Requires Python 3.10+, an OpenAI API key, and a Tavily API key.
 
-```bash
+\`\`\`bash
 python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+# Windows PowerShell: .venv\\Scripts\\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
-```
+\`\`\`
 
-Copy `.env.example` to `.env` and add your credentials:
+Copy \`.env.example\` to \`.env\` and add your credentials:
 
-```dotenv
+\`\`\`dotenv
 OPENAI_API_KEY=your_openai_key
 TAVILY_API_KEY=your_tavily_key
 MARKETING_MODEL_ID=gpt-4o
 MIN_CAROUSEL_SLIDES=7
 MAX_CAROUSEL_SLIDES=10
-```
+\`\`\`
 
-Never commit `.env` or real API keys.
+Never commit \`.env\` or real API keys.
 
-Generate a draft:
+## Run a campaign
 
-```bash
+\`\`\`bash
 marketing-squad --topic "How to explain career gaps" --audience "early-career professionals" --platforms Instagram LinkedIn
-```
+\`\`\`
 
-Or:
+Save the campaign, intermediate artifacts, and evaluation report as JSON while also printing Markdown:
 
-```bash
-python -m marketing_squad.cli --topic "Building a strong project portfolio"
-```
+\`\`\`bash
+marketing-squad --topic "Build a strong project portfolio" --output artifacts/portfolio-campaign.json
+\`\`\`
 
-## Architecture
+Python API:
 
-```text
-src/marketing_squad/
-├── agents/
-│   ├── trend_scout.py          # Research and trend sources
-│   ├── creative_director.py    # Carousel narrative and visuals
-│   └── content_copywriter.py  # Slide copy, caption, hashtags
-├── cli.py                      # Command-line interface
-├── config.py                   # Environment-driven settings
-├── squad.py                    # Public generation API
-├── team.py                     # Agent coordination
-├── tools.py                    # Custom tools
-└── validation.py               # Structural validation/evaluation
-```
+\`\`\`python
+from marketing_squad import generate_campaign, generate_campaign_result
 
-Other key directories: `notebooks/` holds a cleaned Jupyter walkthrough; `tests/` contains deterministic tests; `docs/` contains architecture and evaluation notes; `scripts/` contains the campaign structure evaluator; `examples/` contains a JSON payload template.
+markdown = generate_campaign("How to explain career gaps")
+print(markdown)
 
-## Metrics and results
+result = generate_campaign_result("How to explain career gaps")
+print(result.evaluation)
+print(result.campaign.model_dump(mode="json"))
+\`\`\`
 
-Current checks cover input validation, slide-count rules, required slide fields, hashtag format, and presence of HTTP(S) source links. The structural evaluator reports slide count, field completeness, hashtag count, source count, and pass/fail gates.
+Running a campaign makes live model and search requests and can incur charges. Automated tests use fake agents or test credentials and do not make provider calls.
+
+## Validation and metrics
+
+The final campaign is checked for:
+
+- Configured slide-count range (default 7–10)
+- Sequential slide numbers
+- Complete slide number/title/visual idea/script fields
+- Non-empty topic and caption
+- At least ten distinct hashtags beginning with \`#\`
+- At least one well-formed HTTP(S) source URL
+
+If objective checks fail, the workflow asks the copywriter for one correction attempt. The report exposes the individual gates and counts, not an invented quality score.
+
+These checks do **not** establish factual accuracy, source relevance, naturalness, originality, or marketing effectiveness. No measured improvements in engagement, conversions, speed, or time saved are claimed. The manual evaluation protocol is documented in [docs/evaluation.md](docs/evaluation.md).
 
 Run tests and linting:
 
-```bash
+\`\`\`bash
 pytest
 ruff check .
-```
+\`\`\`
 
-Evaluate a completed normalized campaign JSON:
+Evaluate a stored campaign JSON or the workflow JSON produced with \`--output\`:
 
-```bash
+\`\`\`bash
 python scripts/evaluate_campaign.py path/to/campaign.json
-```
+\`\`\`
 
-These checks evaluate structure only. They do not prove factual accuracy, source relevance, writing quality, or marketing effectiveness. Those measures, along with latency, token use, API costs, engagement, and conversion, have not yet been measured. See [`docs/evaluation.md`](docs/evaluation.md).
+## Security and responsible use
 
-## Safety and limitations
+- Verify linked pages and publication dates; search snippets alone are not proof.
+- Treat retrieved content and model output as untrusted until checked.
+- Review audience fit, factual nuance, sensitive claims, and copyright/licensing before use.
+- Do not auto-publish generated content without a human review.
+- Use API spending limits; never store keys in source files, notebooks, or issue comments.
 
-- Treat retrieved sources and generated claims as untrusted until reviewed.
-- Verify source pages and dates, not just search snippets.
-- Review audience fit, tone, originality, copyright/licensing, and sensitive claims.
-- Do not auto-publish solely based on model output.
-- This prototype does not publish to social platforms or track campaign performance.
-- API usage may incur provider charges.
-
-## Contributing and security
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md). Keep tests reproducible, never commit secrets, and label results as measured, estimated, or not yet measured.
+See [SECURITY.md](SECURITY.md) and [CONTRIBUTING.md](CONTRIBUTING.md).

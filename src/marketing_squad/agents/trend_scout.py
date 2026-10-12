@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from marketing_squad.config import Settings
+from marketing_squad.models import ResearchBrief
 
 
 def build_trend_scout(settings: Settings) -> Any:
@@ -15,7 +16,7 @@ def build_trend_scout(settings: Settings) -> Any:
         from agno.tools.tavily import TavilyTools
     except ImportError as exc:
         raise RuntimeError(
-            "Agent dependencies are missing. Install the project with `pip install -e '.[dev]'`."
+            "Agent dependencies are missing. Install with pip install -e '.[dev]'."
         ) from exc
 
     return Agent(
@@ -23,14 +24,12 @@ def build_trend_scout(settings: Settings) -> Any:
         role="Research current audience-relevant marketing hooks using live search",
         model=OpenAIChat(id=settings.model_id),
         tools=[TavilyTools()],
+        output_schema=ResearchBrief,
         instructions=[
-            "Research three timely, audience-relevant hooks for the requested topic.",
-            (
-                "Use live search results for current-trend claims; "
-                "do not present model memory as current evidence."
-            ),
-            "For every hook, include the source title, URL, and any available publication date.",
-            "Separate observed source facts from your own recommendations or hypotheses.",
-            "If evidence is weak or a date is unavailable, say so rather than inventing it.",
+            "Research exactly three current and audience-relevant hooks using live search.",
+            "For each finding, include evidence, audience relevance, and source references with real URLs.",
+            "Separate source facts from recommendations. Never invent source titles, dates or URLs.",
+            "If evidence is weak or a publication date is unavailable, say so explicitly.",
+            "Do not invent engagement or campaign-performance statistics.",
         ],
     )

@@ -1,48 +1,45 @@
 # Evaluation protocol
 
-## Purpose
+## What is measured in code
 
-The current evaluator checks campaign **structure**, not factual accuracy or business impact. Do not use a structural pass rate as a proxy for content quality, audience response, or conversion.
+The runtime performs deterministic structure checks on a Pydantic campaign artifact:
 
-## Implemented objective checks
-
-Given a normalized JSON payload, `evaluate_campaign` reports:
-
-| Check/metric | Definition |
+| Check | Rule |
 |---|---|
-| Topic present | Topic is a non-empty string |
-| Slide count in range | Number of slides falls within configured bounds (defaults: 7–10) |
-| Slide-field completeness | Share of required slide fields that are non-empty: `slide_number`, `title`, `visual_idea`, `script` |
-| Caption present | Caption is a non-empty string |
-| Minimum hashtags met | At least ten string entries begin with `#` by default |
-| HTTP source present | At least one source uses a valid HTTP(S) URL with a network location |
+| Topic present | Non-empty topic string |
+| Slide count in range | Default 7–10, configurable through environment variables |
+| Sequential numbers | Slide numbers equal 1 through slide count in order |
+| Slide completeness | Every slide has non-empty slide number, title, visual idea, and script |
+| Caption present | Non-empty caption |
+| Hashtags | At least ten distinct strings beginning with \`#\` |
+| Source URL | At least one HTTP(S) URL with a network location |
 
-The output contains individual gates, derived counts, a completeness ratio, and an overall structural pass/fail.
+The workflow retries the creative stage once if the blueprint count or numbering is invalid. It retries the copywriting stage once if the final campaign fails objective structural checks. If it still fails, the workflow raises a validation error and does not report success.
 
-## Run the checks
+## Run the automated checks
 
-```bash
+\`\`\`bash
 pytest
 ruff check .
 python scripts/evaluate_campaign.py path/to/campaign.json
-```
+\`\`\`
 
-The template in `examples/campaign_payload.template.json` is intentionally incomplete and is intended as a schema starting point.
+The evaluator accepts either a normalized campaign object or the workflow JSON emitted by the CLI's \`--output\` option, which contains a \`campaign\` object.
 
-## Recommended quality evaluation
+## What is not measured
 
-For a more meaningful quality assessment, create a fixed set of representative topics and have reviewers independently rate each generated campaign on a 1–5 scale for:
+Structural checks do not evaluate factual accuracy, source support, source freshness, originality, naturalness, audience relevance, brand fit, or slide-to-slide storytelling. The project has no verified benchmark scores for latency, token use, API cost, engagement, or conversion. Do not infer performance from the count of unit tests or structural passes.
+
+## Recommended manual quality study
+
+Create a fixed test set of representative campaign topics. For each run, store a timestamp, configured model, prompt/version, output artifacts, sources, any correction attempt, and latency/cost when providers expose those data. Ask at least two reviewers to independently rate each campaign from 1–5 for:
 
 - Source relevance and recency
-- Factual grounding (claims are supported by linked sources)
+- Factual grounding against linked pages
 - Audience relevance
 - Clarity and naturalness
-- Slide-to-slide narrative flow
-- Specificity and usefulness of advice
-- Brand/style fit
+- Narrative flow
+- Specificity and usefulness
+- Stylistic fit
 
-Record reviewer rubric, model identifier, run date, topic set, source links, failures, and whether content required major edits. Keep model-generated quality judgments separate from human ratings.
-
-## Report results honestly
-
-The original notebook does not establish measured baseline scores for factuality, relevance, copy quality, latency, token usage, cost per campaign, engagement, or conversion. These values must be collected through actual runs and documented with a repeatable protocol; they must not be guessed or backfilled.
+Report the number of campaigns reviewed, the rubric, inter-reviewer disagreement, and examples of failure. Keep reviewer scores separate from automated structural checks. Only publish metrics collected through a repeatable protocol.

@@ -1,23 +1,6 @@
 from marketing_squad.validation import evaluate_campaign, validate_carousel_structure
 
 
-def test_carousel_validator_accepts_configured_range():
-    result = validate_carousel_structure(8)
-    assert result.valid is True
-    assert result.minimum == 7
-    assert result.maximum == 10
-
-
-def test_carousel_validator_rejects_out_of_range():
-    assert validate_carousel_structure(6).valid is False
-    assert validate_carousel_structure(11).valid is False
-
-
-def test_carousel_validator_rejects_non_integer():
-    assert validate_carousel_structure(8.5).valid is False
-    assert validate_carousel_structure(True).valid is False
-
-
 def _valid_campaign():
     return {
         "topic": "How to explain career gaps",
@@ -25,7 +8,7 @@ def _valid_campaign():
             {
                 "slide_number": number,
                 "title": f"Slide {number}",
-                "visual_idea": "A clean, readable visual with one key takeaway.",
+                "visual_idea": "A clean visual with one key takeaway.",
                 "script": "Use a truthful, specific example and avoid overclaiming.",
             }
             for number in range(1, 8)
@@ -34,6 +17,32 @@ def _valid_campaign():
         "hashtags": [f"#tag{number}" for number in range(10)],
         "sources": [{"url": "https://example.com/research", "title": "Example source"}],
     }
+
+
+def test_carousel_validator_accepts_configured_range():
+    result = validate_carousel_structure(8)
+    assert result.valid is True
+    assert result.minimum == 7
+    assert result.maximum == 10
+
+
+def test_carousel_validator_rejects_out_of_range():
+    assert not validate_carousel_structure(6).valid
+    assert not validate_carousel_structure(11).valid
+
+
+def test_carousel_validator_rejects_non_integer():
+    assert not validate_carousel_structure(8.5).valid
+    assert not validate_carousel_structure(True).valid
+
+
+def test_carousel_validator_rejects_invalid_bounds():
+    try:
+        validate_carousel_structure(8, minimum=0, maximum=10)
+    except ValueError as exc:
+        assert "integer bounds" in str(exc)
+    else:
+        raise AssertionError("Invalid bounds should be rejected.")
 
 
 def test_evaluate_campaign_passes_when_structural_checks_are_met():
@@ -53,3 +62,25 @@ def test_evaluate_campaign_flags_missing_fields_and_sources():
     assert report["passed"] is False
     assert report["checks"]["all_slide_fields_complete"] is False
     assert report["checks"]["at_least_one_http_source"] is False
+
+
+def test_evaluate_campaign_flags_nonsequential_slide_numbers():
+    campaign = _valid_campaign()
+    campaign["slides"][0]["slide_number"] = 3
+    report = evaluate_campaign(campaign)
+    assert report["checks"]["slide_numbers_sequential"] is False
+    assert report["passed"] is False
+
+
+def test_evaluate_campaign_requires_distinct_hashtags():
+    campaign = _valid_campaign()
+    campaign["hashtags"] = ["#repeat"] * 10
+    report = evaluate_campaign(campaign)
+    assert report["checks"]["minimum_hashtags_met"] is False
+    assert report["passed"] is False
+
+
+def test_evaluate_campaign_accepts_workflow_json_shape():
+    workflow_payload = {"campaign": _valid_campaign(), "evaluation": {"passed": True}}
+    report = evaluate_campaign(workflow_payload["campaign"])
+    assert report["passed"] is True

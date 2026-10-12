@@ -13,14 +13,18 @@ from marketing_squad.validation import evaluate_campaign
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("campaign_json", type=Path, help="Path to normalized campaign JSON.")
+    parser.add_argument(
+        "campaign_json",
+        type=Path,
+        help="Path to campaign JSON, or to a workflow JSON containing a campaign object.",
+    )
     parser.add_argument("--min-slides", type=int, default=7)
     parser.add_argument("--max-slides", type=int, default=10)
     parser.add_argument("--min-hashtags", type=int, default=10)
     args = parser.parse_args()
 
     try:
-        campaign: Any = json.loads(args.campaign_json.read_text(encoding="utf-8"))
+        payload: Any = json.loads(args.campaign_json.read_text(encoding="utf-8"))
     except OSError as exc:
         print(f"Could not read campaign file: {exc}", file=sys.stderr)
         return 2
@@ -28,6 +32,7 @@ def main() -> int:
         print(f"Invalid JSON: {exc}", file=sys.stderr)
         return 2
 
+    campaign = payload.get("campaign", payload) if isinstance(payload, dict) else payload
     report = evaluate_campaign(
         campaign,
         minimum_slides=args.min_slides,
