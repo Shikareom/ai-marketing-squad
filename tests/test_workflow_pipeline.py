@@ -20,7 +20,6 @@ from marketing_squad.workflow import (
     run_campaign_workflow,
 )
 
-
 SOURCE = SourceReference(
     title="Example research source",
     url="https://example.com/research",

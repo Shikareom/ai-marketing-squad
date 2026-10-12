@@ -15,7 +15,6 @@ from marketing_squad.models import (
 from marketing_squad.squad import generate_campaign
 from marketing_squad.workflow import AgentPipeline
 
-
 SOURCE = SourceReference(title="Example source", url="https://example.com/research")
 
 
