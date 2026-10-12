@@ -127,7 +127,9 @@ def test_pipeline_retries_invalid_blueprint_before_copywriting():
 
 
 def test_pipeline_retries_invalid_campaign():
-    pipeline, _, _, copywriter = make_pipeline(campaigns=[make_campaign(hashtags=3), make_campaign()])
+    pipeline, _, _, copywriter = make_pipeline(
+        campaigns=[make_campaign(hashtags=3), make_campaign()]
+    )
     result = run_campaign_workflow("Career planning", pipeline=pipeline)
     assert result.evaluation["passed"] is True
     assert len(copywriter.prompts) == 2
@@ -172,15 +174,12 @@ def test_invalid_agent_output_is_reported():
 
 def test_workflow_rejects_wrong_types_for_audience_and_retry_count():
     pipeline, *_ = make_pipeline()
-
     with pytest.raises(TypeError, match="audience must be a string"):
         run_campaign_workflow("Career planning", audience=123, pipeline=pipeline)
-
     with pytest.raises(TypeError, match="max_correction_attempts must be an integer"):
         run_campaign_workflow(
             "Career planning", max_correction_attempts=1.5, pipeline=pipeline
         )
-
     with pytest.raises(ValueError, match="max_correction_attempts must be non-negative"):
         run_campaign_workflow(
             "Career planning", max_correction_attempts=-1, pipeline=pipeline

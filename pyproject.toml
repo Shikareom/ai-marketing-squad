@@ -36,3 +36,5 @@ target-version = "py310"
 
 [tool.ruff.lint.isort]
 known-first-party = ["marketing_squad"]
+known-third-party = ["pytest"]
+force-sort-within-sections = true

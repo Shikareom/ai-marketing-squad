@@ -11,20 +11,20 @@ The runtime performs deterministic structure checks on a Pydantic campaign artif
 | Sequential numbers | Slide numbers equal 1 through slide count in order |
 | Slide completeness | Every slide has non-empty slide number, title, visual idea, and script |
 | Caption present | Non-empty caption |
-| Hashtags | At least ten distinct strings beginning with \`#\` |
+| Hashtags | At least ten distinct strings beginning with `#` |
 | Source URL | At least one HTTP(S) URL with a network location |
 
 The workflow retries the creative stage once if the blueprint count or numbering is invalid. It retries the copywriting stage once if the final campaign fails objective structural checks. If it still fails, the workflow raises a validation error and does not report success.
 
 ## Run the automated checks
 
-\`\`\`bash
+```bash
 pytest
 ruff check .
 python scripts/evaluate_campaign.py path/to/campaign.json
-\`\`\`
+```
 
-The evaluator accepts either a normalized campaign object or the workflow JSON emitted by the CLI's \`--output\` option, which contains a \`campaign\` object.
+The evaluator accepts either a normalized campaign object or the workflow JSON emitted by the CLI's `--output` option, which contains a `campaign` object.
 
 ## What is not measured
 
