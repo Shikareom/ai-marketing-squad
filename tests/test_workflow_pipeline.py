@@ -168,3 +168,20 @@ def test_invalid_agent_output_is_reported():
     pipeline, *_ = make_pipeline(research=["not json"])
     with pytest.raises(WorkflowOutputError, match="valid structured ResearchBrief"):
         run_campaign_workflow("Career planning", pipeline=pipeline)
+
+
+def test_workflow_rejects_wrong_types_for_audience_and_retry_count():
+    pipeline, *_ = make_pipeline()
+
+    with pytest.raises(TypeError, match="audience must be a string"):
+        run_campaign_workflow("Career planning", audience=123, pipeline=pipeline)
+
+    with pytest.raises(TypeError, match="max_correction_attempts must be an integer"):
+        run_campaign_workflow(
+            "Career planning", max_correction_attempts=1.5, pipeline=pipeline
+        )
+
+    with pytest.raises(ValueError, match="max_correction_attempts must be non-negative"):
+        run_campaign_workflow(
+            "Career planning", max_correction_attempts=-1, pipeline=pipeline
+        )

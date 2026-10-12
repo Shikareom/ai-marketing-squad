@@ -11,6 +11,8 @@ from pathlib import Path
 from marketing_squad.squad import generate_campaign_result
 from marketing_squad.workflow import WorkflowValidationError
 
+LOGGER = logging.getLogger(__name__)
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -68,7 +70,7 @@ def main() -> int:
         return 2
     except Exception:
         if args.verbose:
-            logging.exception("Campaign generation failed")
+            LOGGER.exception("Campaign generation failed")
         else:
             print(
                 "Campaign generation failed. Re-run with --verbose for diagnostics.",

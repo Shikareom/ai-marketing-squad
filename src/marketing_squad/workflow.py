@@ -104,8 +104,10 @@ class WorkflowResult:
                 f"- **Valid hashtags:** {metrics['valid_hashtag_count']}",
                 f"- **HTTP source URLs:** {metrics['http_source_count']}",
                 "",
-                "> Structural checks do not establish factual accuracy, writing quality, "
-                "or marketing performance. Verify the cited sources and content before publishing.",
+                (
+                    "> Structural checks do not establish factual accuracy, writing quality, "
+                    "or marketing performance. Verify the cited sources and content before publishing."
+                ),
             ]
         )
         return "\n".join(sections)
@@ -137,7 +139,7 @@ def run_campaign_workflow(
     if not isinstance(topic, str) or not topic.strip():
         raise ValueError("topic must not be empty.")
     if not isinstance(audience, str):
-        raise ValueError("audience must be a string.")
+        raise TypeError("audience must be a string.")
     if isinstance(platforms, str) or not isinstance(platforms, Sequence) or not platforms:
         raise ValueError("Provide at least one non-empty platform.")
     normalized_platforms = tuple(
@@ -148,7 +150,7 @@ def run_campaign_workflow(
     ):
         raise ValueError("Every platform must be a non-empty string.")
     if isinstance(max_correction_attempts, bool) or not isinstance(max_correction_attempts, int):
-        raise ValueError("max_correction_attempts must be a non-negative integer.")
+        raise TypeError("max_correction_attempts must be an integer.")
     if max_correction_attempts < 0:
         raise ValueError("max_correction_attempts must be non-negative.")
 

@@ -33,3 +33,6 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint.isort]
+known-first-party = ["marketing_squad"]
